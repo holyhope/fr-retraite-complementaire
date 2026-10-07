@@ -13,10 +13,13 @@ from .career import (
 )
 from .currency import UnsupportedCurrencyError, to_eur
 from .data_loader import list_funds, load_all_funds, load_fund
+from .enums import Currency, Fund
 from .models import FundEntry, FundTable, NoValueAvailableError
 
 __all__ = [
     "Career",
+    "Currency",
+    "Fund",
     "FundBreakdownEntry",
     "FundEntry",
     "FundTable",

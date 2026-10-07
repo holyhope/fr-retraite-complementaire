@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 
-from .data_loader import list_funds, load_fund
+from .data_loader import load_fund
+from .enums import Fund
 from .models import FundTable, NoValueAvailableError
 
 
@@ -15,12 +16,12 @@ from .models import FundTable, NoValueAvailableError
 class PointAcquisition:
     """A single recorded acquisition of points in a fund.
 
-    :param fund: fund identifier (see :func:`fr_retraite_complementaire.list_funds`).
+    :param fund: the fund the points were acquired in.
     :param date: the date the points were credited.
     :param points: the number of points acquired (fund "tokens").
     """
 
-    fund: str
+    fund: Fund
     date: date
     points: Decimal
 
@@ -36,7 +37,7 @@ class FundBreakdownEntry:
 
     def __init__(
         self,
-        fund: str,
+        fund: Fund,
         points: Decimal,
         point_value_eur: Decimal,
         annual_amount_eur: Decimal,
@@ -72,44 +73,49 @@ class Career:
 
     def __init__(self):
         self._acquisitions: list[PointAcquisition] = []
-        self._fund_cache: dict[str, FundTable] = {}
+        self._fund_cache: dict[Fund, FundTable] = {}
 
-    def _resolve_fund(self, fund: str) -> FundTable:
+    @staticmethod
+    def _resolve_fund_id(fund: Fund | str) -> Fund:
+        try:
+            return fund if isinstance(fund, Fund) else Fund(fund)
+        except ValueError as exc:
+            known = ", ".join(f.value for f in Fund)
+            raise UnknownFundError(f"Unknown fund {fund!r}. Available funds: {known}") from exc
+
+    def _resolve_fund(self, fund: Fund) -> FundTable:
         table = self._fund_cache.get(fund)
         if table is None:
-            try:
-                table = load_fund(fund)
-            except FileNotFoundError as exc:
-                raise UnknownFundError(
-                    f"Unknown fund {fund!r}. Available funds: {', '.join(list_funds())}"
-                ) from exc
+            table = load_fund(fund)
             self._fund_cache[fund] = table
         return table
 
-    def add_points(self, fund: str, date: date, points: Decimal | float | str) -> None:
+    def add_points(self, fund: Fund | str, date: date, points: Decimal | float | str) -> None:
         """Record an acquisition of ``points`` in ``fund`` on ``date``.
 
+        :param fund: a :class:`Fund` member, or its raw string identifier.
         :raises UnknownFundError: if ``fund`` is not a recognized fund
             identifier.
         """
-        self._resolve_fund(fund)  # validates the fund exists, eagerly
+        resolved = self._resolve_fund_id(fund)
         self._acquisitions.append(
-            PointAcquisition(fund=fund, date=date, points=Decimal(str(points)))
+            PointAcquisition(fund=resolved, date=date, points=Decimal(str(points)))
         )
 
     @property
     def acquisitions(self) -> list[PointAcquisition]:
         return list(self._acquisitions)
 
-    def total_points(self, fund: str | None = None) -> Decimal:
+    def total_points(self, fund: Fund | str | None = None) -> Decimal:
         """Total points acquired, optionally restricted to a single fund."""
+        resolved = self._resolve_fund_id(fund) if fund is not None else None
         return sum(
-            (a.points for a in self._acquisitions if fund is None or a.fund == fund),
+            (a.points for a in self._acquisitions if resolved is None or a.fund == resolved),
             start=Decimal(0),
         )
 
-    def funds(self) -> set[str]:
-        """The set of fund identifiers with at least one recorded acquisition."""
+    def funds(self) -> set[Fund]:
+        """The set of funds with at least one recorded acquisition."""
         return {a.fund for a in self._acquisitions}
 
     def breakdown(self, as_of: date) -> list[FundBreakdownEntry]:
@@ -123,12 +129,12 @@ class Career:
         :raises NoValueAvailableError: if ``as_of`` precedes the earliest
             known data for a fund the career holds points in.
         """
-        totals: dict[str, Decimal] = defaultdict(lambda: Decimal(0))
+        totals: dict[Fund, Decimal] = defaultdict(lambda: Decimal(0))
         for acquisition in self._acquisitions:
             totals[acquisition.fund] += acquisition.points
 
         result = []
-        for fund, points in sorted(totals.items()):
+        for fund, points in sorted(totals.items(), key=lambda item: item[0].value):
             table = self._resolve_fund(fund)
             point_value_eur = table.sell_value_eur(as_of)
             result.append(

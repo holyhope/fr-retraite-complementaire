@@ -8,6 +8,7 @@ from decimal import Decimal
 from functools import cache
 from importlib import resources
 
+from .enums import Currency, Fund
 from .models import FundEntry, FundTable
 
 _DATA_PACKAGE = "fr_retraite_complementaire.data.funds"
@@ -30,6 +31,8 @@ def list_funds() -> tuple[str, ...]:
 
     A fund identifier is the CSV file's stem, e.g. ``"agirc"``,
     ``"arrco"``, ``"agirc_arrco"``, ``"agrr"``, ``"caisse-gutenberg"``.
+    These correspond 1:1 to :class:`fr_retraite_complementaire.enums.Fund`
+    members.
     """
     package_files = resources.files(_DATA_PACKAGE)
     names = [
@@ -41,12 +44,13 @@ def list_funds() -> tuple[str, ...]:
 
 
 @cache
-def load_fund(name: str) -> FundTable:
-    """Load a single fund's historical table by identifier.
+def load_fund(fund: Fund | str) -> FundTable:
+    """Load a single fund's historical table.
 
-    :param name: fund identifier, as returned by :func:`list_funds`.
+    :param fund: a :class:`Fund` member, or its raw string identifier.
     :raises FileNotFoundError: if no such fund is packaged.
     """
+    name = fund.value if isinstance(fund, Fund) else fund
     resource = resources.files(_DATA_PACKAGE).joinpath(f"{name}.csv")
     if not resource.is_file():
         raise FileNotFoundError(
@@ -62,7 +66,7 @@ def load_fund(name: str) -> FundTable:
                     starting_from=_parse_date(row["Starting from"]),
                     acquisition_cost=_parse_decimal(row["Acquisition cost"]),
                     sell_value=_parse_decimal(row["Sell value"]),
-                    currency=row["Currency"].strip(),
+                    currency=Currency(row["Currency"].strip()),
                 )
             )
     return FundTable(name=name, entries=entries)

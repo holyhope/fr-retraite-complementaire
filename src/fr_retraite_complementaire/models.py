@@ -8,6 +8,7 @@ from datetime import date
 from decimal import Decimal
 
 from .currency import to_eur
+from .enums import Currency
 
 
 class NoValueAvailableError(LookupError):
@@ -25,13 +26,13 @@ class FundEntry:
     :param sell_value: "valeur de service du point" - the value of one
         point when paid out as a pension, in the row's original currency.
         ``None`` when not available (e.g. not yet published).
-    :param currency: one of ``"EUR"``, ``"FRF"``, ``"FRF (ancien)"``.
+    :param currency: the row's original currency.
     """
 
     starting_from: date
     acquisition_cost: Decimal | None
     sell_value: Decimal | None
-    currency: str
+    currency: Currency
 
     @property
     def sell_value_eur(self) -> Decimal | None:

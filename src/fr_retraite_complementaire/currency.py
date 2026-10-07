@@ -19,6 +19,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from .enums import Currency
+
 # Official, legally fixed conversion rate between the French franc and
 # the euro, in effect since January 1st, 1999 (irrevocably fixed).
 FRF_PER_EUR = Decimal("6.55957")
@@ -26,31 +28,35 @@ FRF_PER_EUR = Decimal("6.55957")
 # The 1960 redenomination: 1 nouveau franc = 100 anciens francs.
 ANCIEN_FRANCS_PER_NOUVEAU_FRANC = Decimal(100)
 
-SUPPORTED_CURRENCIES = ("EUR", "FRF", "FRF (ancien)")
-
 
 class UnsupportedCurrencyError(ValueError):
     """Raised when a currency code is not recognized."""
 
 
-def to_eur(amount: Decimal | float | str, currency: str) -> Decimal:
+def to_eur(amount: Decimal | float | str, currency: Currency | str) -> Decimal:
     """Convert ``amount`` expressed in ``currency`` to euros.
 
     :param amount: the amount to convert.
-    :param currency: one of ``"EUR"``, ``"FRF"``, or ``"FRF (ancien)"``.
+    :param currency: a :class:`Currency` member, or its raw string value
+        (``"EUR"``, ``"FRF"``, or ``"FRF (ancien)"``).
     :raises UnsupportedCurrencyError: if ``currency`` is not recognized.
     """
     value = Decimal(str(amount))
-    currency = currency.strip()
 
-    if currency == "EUR":
+    try:
+        resolved = currency if isinstance(currency, Currency) else Currency(currency.strip())
+    except ValueError as exc:
+        supported = ", ".join(c.value for c in Currency)
+        raise UnsupportedCurrencyError(
+            f"Unsupported currency {currency!r}; expected one of {supported}"
+        ) from exc
+
+    if resolved is Currency.EUR:
         return value
-    if currency == "FRF":
+    if resolved is Currency.FRF:
         return value / FRF_PER_EUR
-    if currency == "FRF (ancien)":
+    if resolved is Currency.FRF_ANCIEN:
         nouveau_francs = value / ANCIEN_FRANCS_PER_NOUVEAU_FRANC
         return nouveau_francs / FRF_PER_EUR
 
-    raise UnsupportedCurrencyError(
-        f"Unsupported currency {currency!r}; expected one of {SUPPORTED_CURRENCIES}"
-    )
+    raise AssertionError(f"unhandled currency {resolved!r}")  # pragma: no cover

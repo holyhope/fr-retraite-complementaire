@@ -23,7 +23,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from .career import Career, UnknownFundError
-from .data_loader import list_funds
+from .enums import Fund
 from .models import NoValueAvailableError
 
 
@@ -70,15 +70,13 @@ def _cmd_compute(args: argparse.Namespace) -> int:
             f"{entry.annual_amount_eur:>12.2f} EUR/year"
         )
     print("-" * 80)
-    print(
-        f"{'Total annual annuity':<32} {'':>12}  {'':>10}     {total:>12.2f} EUR/year"
-    )
+    print(f"{'Total annual annuity':<32} {'':>12}  {'':>10}     {total:>12.2f} EUR/year")
     return 0
 
 
 def _cmd_list_funds(_args: argparse.Namespace) -> int:
-    for fund in list_funds():
-        print(fund)
+    for fund in sorted(Fund, key=lambda f: f.value):
+        print(fund.value)
     return 0
 
 
