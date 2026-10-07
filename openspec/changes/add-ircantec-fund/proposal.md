@@ -16,13 +16,13 @@ combined annuity instead of a silent gap.
   packaged `ircantec.csv` historical point-value table, sourced from
   Ircantec's own official publications (not the Agirc-Arrco PDF this
   package otherwise relies on).
-- Ircantec publishes both its acquisition cost ("salaire de référence")
-  and sell value ("valeur de service du point") on the **same**
-  effective date, January 1st each year — unlike `agirc_arrco.csv`,
-  which has two different effective dates (Jan. 1st / Nov. 1st) for
-  those two columns. `ircantec.csv` follows the common two-column
-  step-function CSV format already used by every other fund file, with
-  one row per January 1st.
+- Ircantec's acquisition cost ("salaire de référence") and sell value
+  ("valeur de service du point") are published as two independent
+  series with their own history and effective dates — acquisition cost
+  from 1947, sell value from 2011, with irregular (non-January-1st)
+  effective dates before 2019. `ircantec.csv` uses the same split-row
+  technique as `agirc_arrco.csv` (one row per effective date per
+  column) to represent this. See `design.md` for details.
 - Update the `info_retraite` importer's `FUND_LABELS` mapping so an
   `"Ircantec : N points"` row in a `www.info-retraite.fr` export is now
   converted into `Fund.IRCANTEC` points on the `Career`, instead of

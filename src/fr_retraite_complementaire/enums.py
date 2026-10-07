@@ -30,6 +30,9 @@ class Fund(str, Enum):
 
     - :attr:`AGIRC`, :attr:`ARRCO`, :attr:`AGIRC_ARRCO` are the unified
       cross-fund tables.
+    - :attr:`IRCANTEC` is a distinct complementary pension scheme (for
+      non-permanent public-sector staff), not part of the Agirc-Arrco
+      lineage.
     - All other members are individual, pre-1999 Arrco-affiliated funds.
     """
 
@@ -72,6 +75,7 @@ class Fund(str, Enum):
     IPRICAS = "ipricas"
     IPRIS = "ipris"
     IRCACIM = "ircacim"
+    IRCANTEC = "ircantec"
     IRCASUP = "ircasup"
     IRCEM_RETRAITE = "ircem-retraite"
     IRCOP_SPM = "ircop-spm"

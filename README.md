@@ -77,12 +77,13 @@ fr-retraite-complementaire compute \
 ```
 
 That export reports yearly point totals per complementary scheme. This
-package only has historical point-value data for the merged
-**Agirc-Arrco** scheme (`Agirc-Arrco : ... points` rows); other schemes
-that may appear in the export, such as **Ircantec** (public-sector
-non-permanent staff) or **RCI** (self-employed workers), are entirely
-different pension systems this package does not bundle data for. By
-default, unsupported rows are skipped with a warning printed to stderr;
+package has historical point-value data for the merged **Agirc-Arrco**
+scheme (`Agirc-Arrco : ... points` rows) and **Ircantec**
+(`Ircantec : ... points` rows, public-sector non-permanent staff).
+Other schemes that may appear in the export, such as **RCI**
+(self-employed workers), are entirely different pension systems this
+package does not bundle data for. By default, unsupported rows are
+skipped with a warning printed to stderr;
 use `--on-unsupported-fund skip` to silence the warnings, or
 `--on-unsupported-fund error` to fail hard instead. The same behavior is
 available programmatically via
@@ -93,10 +94,15 @@ be inspected or reported separately.
 ## Data
 
 Historical point-value data is bundled with the package under
-`fr_retraite_complementaire/data/funds/*.csv`, sourced from the official
-Agirc-Arrco compilation PDF:
+`fr_retraite_complementaire/data/funds/*.csv`. 52 of the 53 files are
+sourced from the official Agirc-Arrco compilation PDF:
 
 > https://www.agirc-arrco.fr/storage/2024/10/Compilation_valeurs_de_point_novembre_2025.pdf
+
+`ircantec.csv` is the exception: Ircantec is an entirely separate
+pension scheme (public-sector non-permanent staff), not part of the
+Agirc-Arrco lineage, so it is sourced from Ircantec's own official
+publications instead (see its "Files" bullet below).
 
 Each CSV has the columns:
 
@@ -135,10 +141,22 @@ Starting from,Acquisition cost,Sell value,Currency
   1st with only `Acquisition cost` filled in, one dated Nov. 1st with
   only `Sell value` filled in) rather than one row per year with both
   columns changing together.
-- All other files — one per pre-1999 Arrco-affiliated fund (49 funds),
-  covering their individual historical point values before Arrco
-  unification (e.g. `agrr.csv`, `caisse-gutenberg.csv`,
-  `cpm-convention-de-solidarite.csv`).
+- All other Agirc-Arrco-lineage files — one per pre-1999
+  Arrco-affiliated fund (49 funds), covering their individual
+  historical point values before Arrco unification (e.g. `agrr.csv`,
+  `caisse-gutenberg.csv`, `cpm-convention-de-solidarite.csv`).
+- `ircantec.csv` — Ircantec (public-sector non-permanent staff), an
+  entirely separate scheme from Agirc-Arrco. `Acquisition cost`
+  ("salaire de référence") covers **1947–2026**, sourced from
+  Ircantec's "Evolution des taux théoriques et du salaire de référence
+  Ircantec" table
+  (`baseircantec.retraites.fr`). `Sell value` ("valeur de service du
+  point") covers **2011–2026** only, sourced from
+  https://www.ircantec.retraites.fr/retraite/valeur-point — **no
+  official sell value was found for 1971 (Ircantec's creation) through
+  2011**; see Known limitations. Both columns use the split-row
+  technique like `agirc_arrco.csv`, since they are published on
+  different (and, before 2019, irregular) effective dates.
 
 ### Known limitations
 
@@ -157,6 +175,12 @@ Starting from,Acquisition cost,Sell value,Currency
   Agirc and Arrco merged (2019); it values points strictly against the
   fund they were recorded in. Real-world pension calculations by a
   points-tracking fund account for those conversions.
+- `ircantec.csv`'s **sell value is only available from 2011 onward**
+  (same pattern as `arrco.csv`'s pre-1999 gap) — no official source
+  was found covering 1971–2011. `Acquisition cost`, by contrast, is
+  available from 1947. A `Career` with Ircantec points recorded before
+  2011 can still be loaded, but computing its annuity will raise
+  `NoValueAvailableError` until a sell value is known.
 
 No values were fabricated; blank cells reflect either a lack of data in
 the source for that field, or no revaluation event for that sub-period.

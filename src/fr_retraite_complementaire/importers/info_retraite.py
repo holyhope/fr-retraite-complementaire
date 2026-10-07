@@ -23,13 +23,13 @@ Notes on the format:
 
 Only funds this package has data for can be converted into a
 :class:`~fr_retraite_complementaire.career.Career`. As of this writing,
-that is only the merged **Agirc-Arrco** scheme (``Fund.AGIRC_ARRCO``).
+that is the merged **Agirc-Arrco** scheme (``Fund.AGIRC_ARRCO``) and
+**Ircantec** (``Fund.IRCANTEC``, public-sector non-permanent staff).
 Other complementary schemes that may appear in an info-retraite.fr
-export -- such as **Ircantec** (public-sector non-permanent staff) or
-**RCI** (self-employed workers) -- are entirely different pension
-schemes with their own point-value tables, which this package does not
-bundle. Rows for those schemes are handled per ``on_unsupported`` (see
-:func:`load_career`).
+export -- such as **RCI** (self-employed workers) -- are entirely
+different pension schemes with their own point-value tables, which
+this package does not bundle. Rows for those schemes are handled per
+``on_unsupported`` (see :func:`load_career`).
 """
 
 from __future__ import annotations
@@ -50,10 +50,11 @@ _POINTS_LINE_RE = re.compile(r"^(?P<label>.+?)\s*:\s*(?P<value>[\d,]+)\s*points?
 
 #: Maps an info-retraite.fr scheme label to the :class:`Fund` this
 #: package has historical data for. Labels not present here (e.g.
-#: ``"Ircantec"``, ``"RCI"``) are entirely different pension schemes
-#: this package does not bundle data for.
+#: ``"RCI"``) are entirely different pension schemes this package does
+#: not bundle data for.
 FUND_LABELS: dict[str, Fund] = {
     "Agirc-Arrco": Fund.AGIRC_ARRCO,
+    "Ircantec": Fund.IRCANTEC,
 }
 
 

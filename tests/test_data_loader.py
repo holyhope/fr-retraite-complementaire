@@ -1,7 +1,10 @@
 from datetime import date
 from decimal import Decimal
 
+import pytest
+
 from fr_retraite_complementaire.data_loader import list_funds, load_all_funds, load_fund
+from fr_retraite_complementaire.models import NoValueAvailableError
 
 
 def test_list_funds_includes_known_funds():
@@ -10,7 +13,7 @@ def test_list_funds_includes_known_funds():
     assert "arrco" in funds
     assert "agirc_arrco" in funds
     assert "agrr" in funds
-    assert len(funds) == 52  # 3 unified tables + 49 affiliated funds
+    assert len(funds) == 53  # 3 unified tables + 49 affiliated funds + Ircantec
 
 
 def test_load_fund_agirc_has_entries_sorted_ascending():
@@ -50,3 +53,31 @@ def test_agirc_arrco_acquisition_cost_changes_on_january_1st():
     # The sell value, meanwhile, only flips on Nov. 1st.
     assert table.sell_value_eur(date(2022, 10, 31)) == Decimal("1.2841")
     assert table.sell_value_eur(date(2022, 11, 1)) == Decimal("1.3498")
+
+
+def test_ircantec_acquisition_cost_and_sell_value_split_rows():
+    # Regression test: Ircantec's "salaire de reference" (acquisition
+    # cost, from 1947) and "valeur de service du point" (sell value,
+    # from 2011) are two independently dated series -- not a single
+    # once-a-year row like this design originally assumed.
+    table = load_fund("ircantec")
+    assert table.earliest_date == date(1947, 1, 1)
+    assert table.latest_date == date(2026, 1, 1)
+
+    # Acquisition cost: known published values, cross-checked against
+    # the source's own euro-equivalent column.
+    assert table.acquisition_cost_eur(date(1947, 1, 1)) == pytest.approx(
+        Decimal("0.0396"), abs=1e-4
+    )
+    assert table.acquisition_cost_eur(date(2026, 1, 1)) == Decimal("5.787")
+
+    # Sell value: irregular pre-2019 effective dates, including a
+    # mid-year change in 2022.
+    assert table.sell_value_eur(date(2011, 4, 1)) == Decimal("0.45887")
+    assert table.sell_value_eur(date(2022, 6, 30)) == Decimal("0.49241")
+    assert table.sell_value_eur(date(2022, 7, 1)) == Decimal("0.51211")
+    assert table.sell_value_eur(date(2026, 1, 1)) == Decimal("0.56053")
+
+    # Documented gap: no official sell value before 2011.
+    with pytest.raises(NoValueAvailableError):
+        table.sell_value_eur(date(2010, 12, 31))
