@@ -1,4 +1,5 @@
 from datetime import date
+from decimal import Decimal
 
 from fr_retraite_complementaire.data_loader import list_funds, load_all_funds, load_fund
 
@@ -30,3 +31,22 @@ def test_load_all_funds():
     tables = load_all_funds()
     assert len(tables) == len(list_funds())
     assert all(len(table) > 0 for table in tables.values())
+
+
+def test_agirc_arrco_acquisition_cost_changes_on_january_1st():
+    # Regression test: "Acquisition cost" (valeur d'achat du point)
+    # takes effect Jan. 1st each year, while "Sell value" (valeur de
+    # service du point) takes effect Nov. 1st -- they must not share a
+    # single "Starting from" date, or one column lags by ~10 months.
+    table = load_fund("agirc_arrco")
+
+    # 2021's acquisition cost (17.3982) must still be in effect right
+    # up to end of 2021, and 2022's new value (17.4316) must already be
+    # in effect from Jan. 1st 2022 -- not from Nov. 1st 2022.
+    assert table.acquisition_cost_eur(date(2021, 12, 31)) == Decimal("17.3982")
+    assert table.acquisition_cost_eur(date(2022, 1, 1)) == Decimal("17.4316")
+    assert table.acquisition_cost_eur(date(2022, 10, 31)) == Decimal("17.4316")
+
+    # The sell value, meanwhile, only flips on Nov. 1st.
+    assert table.sell_value_eur(date(2022, 10, 31)) == Decimal("1.2841")
+    assert table.sell_value_eur(date(2022, 11, 1)) == Decimal("1.3498")

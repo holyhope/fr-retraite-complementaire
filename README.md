@@ -104,9 +104,14 @@ Each CSV has the columns:
 Starting from,Acquisition cost,Sell value,Currency
 ```
 
-- `Starting from` — date from which the row's values apply.
-- `Acquisition cost` ("salaire de référence") — cost to acquire one
-  point. Only populated on the row where it changes.
+- `Starting from` — date from which the row's values apply. The two
+  value columns are independent step functions and are **not**
+  necessarily updated on the same date within a row; a row only fills
+  in the column(s) that actually changed on that date and leaves the
+  other blank (see note on `agirc_arrco.csv` below).
+- `Acquisition cost` ("salaire de référence" / "valeur d'achat du
+  point") — cost to acquire one point. Only populated on the row where
+  it changes.
 - `Sell value` ("valeur de service du point") — value of one point when
   paid out as a pension. Treated as a step function: a date without its
   own sell value inherits the last known one.
@@ -121,8 +126,15 @@ Starting from,Acquisition cost,Sell value,Currency
   federation of ~50 independent affiliated funds, each with its own
   point sell value; there was no single unified Arrco point value prior
   to 1999.
-- `agirc_arrco.csv` — unified Agirc-Arrco point value since the Nov.
-  2019 merger.
+- `agirc_arrco.csv` — unified Agirc-Arrco point value since the Jan.
+  2019 merger. Its two columns change on **different dates each
+  year**, per Agirc-Arrco's own governance calendar: `Acquisition
+  cost` ("valeur d'achat du point") takes effect **January 1st**, while
+  `Sell value` ("valeur de service du point") takes effect **November
+  1st**. The CSV therefore has up to two rows per year (one dated Jan.
+  1st with only `Acquisition cost` filled in, one dated Nov. 1st with
+  only `Sell value` filled in) rather than one row per year with both
+  columns changing together.
 - All other files — one per pre-1999 Arrco-affiliated fund (49 funds),
   covering their individual historical point values before Arrco
   unification (e.g. `agrr.csv`, `caisse-gutenberg.csv`,
