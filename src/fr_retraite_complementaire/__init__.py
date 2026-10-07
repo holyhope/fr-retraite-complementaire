@@ -14,6 +14,7 @@ from .career import (
 from .currency import UnsupportedCurrencyError, to_eur
 from .data_loader import list_funds, load_all_funds, load_fund
 from .enums import Currency, Fund
+from .importers import load_info_retraite_career
 from .models import FundEntry, FundTable, NoValueAvailableError
 
 __all__ = [
@@ -30,6 +31,7 @@ __all__ = [
     "list_funds",
     "load_all_funds",
     "load_fund",
+    "load_info_retraite_career",
     "to_eur",
 ]
 

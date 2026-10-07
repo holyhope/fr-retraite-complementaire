@@ -3,14 +3,21 @@
 Usage::
 
     fr-retraite-complementaire compute --career career.csv --as-of 2025-01-01
+    fr-retraite-complementaire compute --format info-retraite \\
+        --career export.csv --as-of 2025-01-01
     fr-retraite-complementaire list-funds
 
-Where ``career.csv`` has the columns ``fund,date,points``, e.g.::
+Where ``career.csv`` (``--format career``, the default) has the columns
+``fund,date,points``, e.g.::
 
     fund,date,points
     agirc,1995-06-01,120.5
     arrco,1995-06-01,80
     agrr,1980-01-01,15
+
+``--format info-retraite`` instead reads a "Mes points retraite" export
+from https://www.info-retraite.fr (the "synthese" page), as documented in
+:mod:`fr_retraite_complementaire.importers.info_retraite`.
 """
 
 from __future__ import annotations
@@ -18,12 +25,19 @@ from __future__ import annotations
 import argparse
 import csv
 import sys
+import warnings
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
 from .career import Career, UnknownFundError
 from .enums import Fund
+from .importers.info_retraite import (
+    InfoRetraiteFormatError,
+    UnsupportedFundInImportError,
+    UnsupportedFundPolicy,
+)
+from .importers.info_retraite import load_career as load_info_retraite_career
 from .models import NoValueAvailableError
 
 
@@ -31,7 +45,7 @@ def _parse_date(value: str) -> date:
     return datetime.strptime(value, "%Y-%m-%d").date()  # noqa: DTZ007 (date-only, tz is irrelevant)
 
 
-def _load_career(path: Path) -> Career:
+def _load_career_csv(path: Path) -> Career:
     career = Career()
     with path.open("r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
@@ -51,8 +65,34 @@ def _load_career(path: Path) -> Career:
     return career
 
 
+def _load_career_info_retraite(path: Path, on_unsupported: str) -> Career:
+    policy = UnsupportedFundPolicy(on_unsupported)
+    try:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            result = load_info_retraite_career(path, on_unsupported=policy)
+        for warning in caught:
+            print(f"warning: {warning.message}", file=sys.stderr)
+    except (InfoRetraiteFormatError, UnsupportedFundInImportError) as exc:
+        raise SystemExit(f"{path}: {exc}") from exc
+
+    if result.skipped and policy is UnsupportedFundPolicy.SKIP:
+        skipped_funds = sorted({entry.label for entry in result.skipped})
+        print(
+            f"note: silently skipped {len(result.skipped)} points entry(ies) for "
+            f"unsupported scheme(s): {', '.join(skipped_funds)}",
+            file=sys.stderr,
+        )
+    return result.career
+
+
 def _cmd_compute(args: argparse.Namespace) -> int:
-    career = _load_career(Path(args.career))
+    path = Path(args.career)
+    if args.format == "info-retraite":
+        career = _load_career_info_retraite(path, args.on_unsupported_fund)
+    else:
+        career = _load_career_csv(path)
+
     as_of = _parse_date(args.as_of)
     try:
         breakdown = career.breakdown(as_of)
@@ -90,7 +130,25 @@ def build_parser() -> argparse.ArgumentParser:
     compute.add_argument(
         "--career",
         required=True,
-        help="Path to a CSV file with columns: fund,date,points",
+        help="Path to the input CSV file (shape depends on --format).",
+    )
+    compute.add_argument(
+        "--format",
+        choices=["career", "info-retraite"],
+        default="career",
+        help=(
+            "Input shape: 'career' (fund,date,points, default) or "
+            "'info-retraite' (a www.info-retraite.fr points export)."
+        ),
+    )
+    compute.add_argument(
+        "--on-unsupported-fund",
+        choices=[policy.value for policy in UnsupportedFundPolicy],
+        default=UnsupportedFundPolicy.WARN.value,
+        help=(
+            "Only used with --format info-retraite: how to handle schemes this "
+            "package has no data for (e.g. Ircantec, RCI). Default: warn."
+        ),
     )
     compute.add_argument(
         "--as-of",

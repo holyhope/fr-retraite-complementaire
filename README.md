@@ -63,6 +63,33 @@ arrco,1995-06-01,80
 agrr,1980-01-01,15
 ```
 
+### Importing a www.info-retraite.fr export
+
+If you have a points-history CSV exported from the "Mes points retraite"
+synthese page (e.g. `https://affcar.info-retraite.fr/#/synthese`), pass
+it directly with `--format info-retraite`:
+
+```bash
+fr-retraite-complementaire compute \
+  --format info-retraite \
+  --career info-retraite-export.csv \
+  --as-of 2025-01-01
+```
+
+That export reports yearly point totals per complementary scheme. This
+package only has historical point-value data for the merged
+**Agirc-Arrco** scheme (`Agirc-Arrco : ... points` rows); other schemes
+that may appear in the export, such as **Ircantec** (public-sector
+non-permanent staff) or **RCI** (self-employed workers), are entirely
+different pension systems this package does not bundle data for. By
+default, unsupported rows are skipped with a warning printed to stderr;
+use `--on-unsupported-fund skip` to silence the warnings, or
+`--on-unsupported-fund error` to fail hard instead. The same behavior is
+available programmatically via
+`fr_retraite_complementaire.load_info_retraite_career(path, on_unsupported=...)`,
+which returns an `ImportResult(career, skipped)` so skipped entries can
+be inspected or reported separately.
+
 ## Data
 
 Historical point-value data is bundled with the package under

@@ -219,3 +219,8 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 dist/
+
+# Personal data: a real www.info-retraite.fr export contains someone's
+# actual pension point history and must never be committed. Tests use
+# tests/data/info-retraite-sample.csv (synthetic) instead.
+tests/data/info-retraite.csv
