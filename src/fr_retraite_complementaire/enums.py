@@ -33,6 +33,8 @@ class Fund(str, Enum):
     - :attr:`IRCANTEC` is a distinct complementary pension scheme (for
       non-permanent public-sector staff), not part of the Agirc-Arrco
       lineage.
+    - :attr:`RCI` is a distinct complementary pension scheme (for
+      self-employed workers), not part of the Agirc-Arrco lineage.
     - All other members are individual, pre-1999 Arrco-affiliated funds.
     """
 
@@ -85,6 +87,7 @@ class Fund(str, Enum):
     IRPSIMMEC = "irpsimmec"
     IRREP = "irrep"
     ISICA = "isica"
+    RCI = "rci"
     RESURCA = "resurca"
     RIPS = "rips"
     UNIRS = "unirs"

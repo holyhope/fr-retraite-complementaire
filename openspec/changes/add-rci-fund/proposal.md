@@ -13,67 +13,93 @@ the same pattern already used for Agirc-Arrco and, more recently, Ircantec
 
 - Add a new `rci.csv` fund covering the unified **RCI** ("Régime
   Complémentaire des Indépendants") point value from its creation on
-  **January 1st, 2013** onward (RCI merged the pre-existing RCO, for
-  artisans, and NRCO, for commerçants, schemes into one points-based
-  regime).
-- **Investigate** whether official historical point-value tables exist
-  for RCI's pre-2013 predecessor schemes, **RCO** (artisans, in effect
-  since 1979) and **NRCO** (commerçants) — mirroring how this package
-  already bundles the 49 pre-1999 Arrco-affiliated funds alongside the
-  unified `arrco.csv`. This change's `tasks.md` includes that research as
-  an early task. If a citable table is found for either scheme, adding it
-  as its own fund is **follow-up work**: it needs its own `funds/rco` or
-  `funds/nrco` capability and delta spec, added by updating this change
-  (or filing a new one) *before* writing the corresponding CSV/code —
-  not silently implemented as a side effect of this change's `tasks.md`.
-  This proposal commits only to the `funds/rci` capability below; see
-  `design.md` "Open Questions" for the decision this research needs to
-  resolve.
-- Add `Fund.RCI` (and, if their historical tables are found and bundled,
-  `Fund.RCO` / `Fund.NRCO`) to the `Fund` enum.
+  **January 1st, 2013** onward. **[DONE — already implemented.]**
+- Add historical point-value data for RCI's pre-2013 predecessor and
+  legacy sub-category schemes, confirmed via primary sources (CNAV
+  circulaire n°2025-31, `statistiques-recherche.lassuranceretraite.fr`
+  annual fiches, and the IPP `baremes-ipp-yaml` compilation):
+  - **RCO** (artisans, in effect since 1979) — differentiates into
+    permanently distinct sell-value rates by acquisition era from 2009
+    onward: points acquired before 1979 ("reconstitution de carrière"),
+    1979–1996, and 1997–2012 (the last of which the regulation
+    explicitly "aligns" with RCI's own rate from 2013 onward).
+  - **NRCO** (commerçants, in effect since 2004, succeeding an earlier
+    "RC commerçants" label applied to points from 1973 onward) — single
+    continuous rate, also aligned with RCI's rate from 2013 onward.
+  - **RC (régime des conjoints de commerçants)** — a legacy scheme for
+    commerçants' spouses, listed as its own distinct line in official
+    circulars ("Point RC").
+  - **CMP** ("compte minimum de points") — a related legacy scheme for
+    spouses who didn't meet the matrimonial condition for RC.
+  - **RCEBTP** (construction-sector complementary scheme) — migrated
+    into RCI points on January 1st, 2023; whether an independent
+    pre-2023 historical point-value table exists is still unconfirmed
+    and is a research task.
+  - Exactly how many `Fund` identifiers each scheme needs (e.g. whether
+    RCO needs three separate `Fund` members for its three differentiated
+    eras) is a data-shape decision made during implementation, once each
+    era's full series is pulled — mirroring how RCI's own split-row
+    question was resolved during `/opsx-apply` rather than guessed here.
+- Add `Fund.RCI` **[DONE]**, plus new `Fund` members for RCO (one or
+  more), NRCO, RC-conjoints, CMP, and — if source data is found — RCEBTP.
 - Update the `info_retraite.py` importer's `FUND_LABELS` so `"RCI : N
-  points"` rows are recognized and converted into `Career` points against
-  `Fund.RCI`, rather than being skipped as unsupported.
+  points"` rows are recognized (**[DONE]**); extend similarly if any of
+  the newly-added legacy schemes also appear as their own labeled rows in
+  a www.info-retraite.fr export (to be confirmed during implementation —
+  it's possible these only ever appear bundled into the "RCI" line once
+  migrated/aligned, in which case no further importer change is needed
+  for them).
 - Update the README and module docstrings that currently cite RCI as an
-  example of an unsupported scheme.
-- **Not** in scope: reconciling the legacy, still-distinct "valeur de
-  service du point" sub-categories that RCI itself keeps for points
-  carried over from before the merger (e.g. official circulars list
-  separate values for "points RCO 1979-1996" and "points de reconstitution
-  de carrière avant 1979", distinct from the single, unified point value
-  used for points *acquired* under RCI from 2013 onward). This package
-  does not model cross-merger point-conversion coefficients for
-  Agirc-Arrco either (see that capability's existing non-goal); RCI's
-  legacy sub-categories are the same kind of merger-artifact and are
-  called out as an explicit non-goal in `design.md`.
+  example of an unsupported scheme. **[DONE for RCI itself.]**
+- **Still not in scope**: modeling point-conversion coefficients between
+  RCI/its legacy schemes and Agirc-Arrco/Ircantec — they remain
+  independent schemes, each contributing its own line to a combined
+  annuity (same non-goal this package already applies to the 2019
+  Agirc-Arrco merger).
 
 ## Capabilities
 
 ### New Capabilities
 
-- `funds/rci`: the RCI fund identifier, its historical point-value data
-  (2013 onward), and `info_retraite.py` importer recognition of `"RCI"`
-  rows — mirrors `funds/ircantec`'s shape and scope. This is the only
-  capability this change commits to; see "What Changes" above for why
-  `funds/rco` / `funds/nrco` are explicitly not included here.
+- `funds/rci`: the RCI fund identifier and its historical point-value
+  data (2013 onward) are **[DONE]**; the `info_retraite.py` importer's
+  `"RCI"` row recognition is still outstanding (see Impact).
+- `funds/rco`: RCO (artisans' pre-2013 legacy scheme) fund identifier(s)
+  and historical point-value data, covering its differentiated
+  acquisition-era rates.
+- `funds/nrco`: NRCO (commerçants' pre-2013 legacy scheme) fund
+  identifier and historical point-value data.
+- `funds/rc-conjoints`: the commerçants'-spouses legacy "RC" scheme fund
+  identifier and historical point-value data.
+- `funds/cmp`: the "compte minimum de points" legacy scheme fund
+  identifier and historical point-value data.
+- `funds/rcebtp`: the RCEBTP construction-sector scheme fund identifier
+  and historical point-value data, if a citable pre-2023 source is
+  found during implementation; if not, this capability is reduced to
+  documenting the 2023 migration as a known limitation rather than
+  providing a historical table (same posture as `add-ircantec-fund`'s
+  IPACTE/IGRANTE non-goal).
 
 ### Modified Capabilities
 
-(none — RCI's current "unsupported scheme" behavior in `info_retraite.py`
-has no existing capability spec of its own to modify; it is folded into
-the new `funds/rci` capability, same precedent as `funds/ircantec`.)
+(none)
 
 ## Impact
 
-- New data files: `src/fr_retraite_complementaire/data/funds/rci.csv`,
-  and possibly `rco.csv` / `nrco.csv` (see above).
-- `src/fr_retraite_complementaire/enums.py`: new `Fund` member(s).
+- New data files: `src/fr_retraite_complementaire/data/funds/rci.csv`
+  **[DONE]**, plus new CSV(s) for RCO (one or more), NRCO, RC-conjoints,
+  CMP, and possibly RCEBTP.
+- `src/fr_retraite_complementaire/enums.py`: `Fund.RCI` **[DONE]**, plus
+  new `Fund` members for RCO, NRCO, RC-conjoints, CMP, and possibly
+  RCEBTP.
 - `src/fr_retraite_complementaire/importers/info_retraite.py`:
-  `FUND_LABELS` gains an `"RCI": Fund.RCI` entry; module docstring and
-  comments updated.
-- `README.md`: "Data" → "Files" list gains new bullet(s); "Importing a
-  www.info-retraite.fr export" section no longer cites RCI as
-  unsupported.
-- Tests: fund-count assertions, importer fixture/tests, and new
-  focused data-loading tests for the new fund(s).
-- No breaking changes: purely additive, same as `add-ircantec-fund`.
+  `FUND_LABELS` still needs an `"RCI": Fund.RCI` entry (not yet added,
+  despite `Fund.RCI` and `rci.csv` existing); possibly more entries if
+  the legacy schemes appear as distinct labels in exports.
+- `README.md`: "Data" → "Files" list gains new bullets; "Importing a
+  www.info-retraite.fr export" section still cites RCI as an example of
+  an unsupported scheme and needs updating once the importer entry
+  above is added.
+- Tests: fund-count assertions, importer fixture/tests, and new focused
+  data-loading tests for each new fund.
+- No breaking changes: purely additive.
