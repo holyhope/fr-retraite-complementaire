@@ -35,6 +35,14 @@ class Fund(str, Enum):
       lineage.
     - :attr:`RCI` is a distinct complementary pension scheme (for
       self-employed workers), not part of the Agirc-Arrco lineage.
+    - :attr:`RCO_AVANT_1979`, :attr:`RCO_1979_1996`, :attr:`RCO_1997_2012`
+      value RCO (artisans' pre-RCI complementary scheme) points
+      depending on when they were acquired, since RCI's 2013 creation
+      permanently fixed three distinct point values for them rather than
+      merging them into one rate. :attr:`NRCO` is commerçants' pre-RCI
+      complementary scheme (2004-2012, aligned with RCI's rate from
+      2013). :attr:`RC_CONJOINTS` and :attr:`CMP` are legacy schemes for
+      commerçants' spouses, predating RCI.
     - All other members are individual, pre-1999 Arrco-affiliated funds.
     """
 
@@ -60,6 +68,7 @@ class Fund(str, Enum):
     CIRCO = "circo"
     CIRPS = "cirps"
     CMGRR = "cmgrr"
+    CMP = "cmp"
     CNRO = "cnro"
     CPCEAA = "cpceaa"
     CPM = "cpm"
@@ -87,7 +96,12 @@ class Fund(str, Enum):
     IRPSIMMEC = "irpsimmec"
     IRREP = "irrep"
     ISICA = "isica"
+    NRCO = "nrco"
+    RC_CONJOINTS = "rc_conjoints"
     RCI = "rci"
+    RCO_1979_1996 = "rco_1979_1996"
+    RCO_1997_2012 = "rco_1997_2012"
+    RCO_AVANT_1979 = "rco_avant_1979"
     RESURCA = "resurca"
     RIPS = "rips"
     UNIRS = "unirs"

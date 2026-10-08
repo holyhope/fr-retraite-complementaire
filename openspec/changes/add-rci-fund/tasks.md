@@ -40,47 +40,91 @@
 
 ## 3. Research and transcribe RCO (artisans' legacy scheme)
 
-- [ ] 3.1 Pull RCO's full historical series for each of its three
-      permanently-distinct post-2009 era buckets (pre-1979
-      "reconstitution de carrière", 1979-1996, 1997-2012-aligned) plus
-      its pre-2009 undifferentiated acquisition-cost series
-      (`salref_rc_art.yaml`-equivalent primary source), from 1979/2009
-      through 2026 — verify by listing each bucket's earliest/latest
-      confirmed effective date and citing the source for each.
-- [ ] 3.2 Decide and record the final `Fund` member breakdown for RCO
-      (how many members, their names/slugs) based on what 3.1 found —
-      verify by stating the decision and why, updating this task list
-      with the resulting file/enum-member names if they differ from the
-      placeholders used below.
-- [ ] 3.3 Create `rco_<bucket>.csv` file(s) for each `Fund` member
-      decided in 3.2 (sell-value-only for the three differentiated
-      buckets per design.md; include the pre-2009 undifferentiated
-      acquisition-cost series on whichever bucket inherited it, or as
-      its own fund if 3.2 decided that) — verify each loads via
-      `load_fund(...)` and resolves a known date without error.
+- [x] 3.1 Pulled RCO's full historical series from primary sources:
+      undifferentiated sell value 1980-2009 and acquisition cost
+      1979-2012 from the IPP `baremes-ipp-yaml` repo's
+      `parameters/retraites/independants/pt_rc_art.yaml` and
+      `salref_rc_art.yaml` (each citing `legislation.cnav.fr`/`rsi.fr`
+      barèmes); the three post-2009-differentiated buckets' 2009-2012
+      values from the same `pt_rc_art.yaml`; their 2013-2022 values from
+      `pt_rci.yaml`; their 2023/2024 values from CNAV/Assurance
+      Retraite's "Fiche-stock Régime complémentaire TI" annual stats
+      sheets (footnote citing the 1979-1996 and avant-1979 rates
+      alongside the headline RCI rate, cross-checked year-by-year
+      against `pt_rci.yaml`'s overlapping 2019-2022 values — exact
+      match); their 2026 value from CNAV circulaire n°2025-31 (text
+      extracted via `pdftotext`). 2025 is a one-year gap (no fiche-stock
+      published for it yet) between confirmed 2024 and 2026 values.
+      Earliest/latest per bucket: avant-1979 and 1979-1996 both
+      1980-01-01–2026-01-01; 1997-2012 bucket 1997-01-01–2026-01-01
+      (own acquisition window starts in 1997, inheriting the shared
+      pre-2009 curve from its own start date).
+- [x] 3.2 Decided: three `Fund` members, `rco_avant_1979`,
+      `rco_1979_1996`, `rco_1997_2012` (matching the placeholders
+      already used in `rco/spec.md`) — confirmed distinct via the 2026
+      circular (1.158€ / 1.205€ / 1.347€ respectively, the last matching
+      RCI's own rate exactly, confirming the "1997-2012 aligned" design
+      decision). All three are sell-value-only: no acquisition-cost data
+      is included for any of them, even though real historical
+      acquisition-cost data exists for 1979-1996/1997-2012, because the
+      `FundTable` step-function's blank-means-"unchanged" semantics have
+      no way to mark the column closed once a scheme's acquisition
+      window ends — including it would wrongly resolve to the frozen
+      pre-closure rate for any later date. This matches `rco/spec.md`'s
+      explicit "MAY raise not-available" allowance.
+- [x] 3.3 Created `rco_avant_1979.csv`, `rco_1979_1996.csv`,
+      `rco_1997_2012.csv` — verified each loads via `load_fund(...)` and
+      resolves `sell_value_eur` without error at 2015-01-01, 2020-01-01,
+      2024-01-01, and 2026-06-01 (values: 1.107/1.124/1.177;
+      1.116/1.138/1.203; 1.153/1.196/1.327; 1.158/1.205/1.347
+      respectively), and that `acquisition_cost_eur` raises
+      `NoValueAvailableError` for all three at every tested date.
 
 ## 4. Research and transcribe NRCO (commerçants' legacy scheme)
 
-- [ ] 4.1 Pull NRCO's full historical series (acquisition cost and sell
-      value, 2004-2012, "aligned" with RCI from 2013 onward per
-      design.md) — verify by citing the source and earliest/latest
-      effective dates.
-- [ ] 4.2 Create `src/fr_retraite_complementaire/data/funds/nrco.csv`
-      and add `Fund.NRCO` — verify it loads and resolves without error
-      on a known pre- and post-2013 date.
+- [x] 4.1 Pulled NRCO's sell-value series 2004-2012 from the IPP
+      `baremes-ipp-yaml` repo's `pt_rc_com.yaml` (citing
+      `legislation.cnav.fr`/`rsi.fr`/`capital.fr`); 2013 onward reuses
+      the RCI/"NRCO et points RCO acquis à compter de 1997" rate
+      (confirmed identical to `rco_1997_2012`'s own post-2013 series and
+      to `rci.csv`'s own rate, per the circular's single shared 1.347€
+      2026 line for both). Earliest/latest: 2004-01-01–2026-01-01.
+      Acquisition cost intentionally not modeled (see 4.1's revised task
+      text / `nrco/spec.md`'s "MAY raise not-available" requirement).
+      Also found, and deliberately did **not** model separately: IPP's
+      data tracks an eighth sub-category, "Commerçants, RC (1973-2004)"
+      (a commerçants'-own pre-NRCO predecessor scheme, unrelated to the
+      circular's "Point RC" conjoints/spouses scheme despite the shared
+      abbreviation) — its value is numerically identical to NRCO's at
+      every date both exist (2013-2019) and it isn't tracked at all in
+      the current CNAV circular, so no separate `Fund` was created for
+      it.
+- [x] 4.2 Created `src/fr_retraite_complementaire/data/funds/nrco.csv`
+      and added `Fund.NRCO` — verified it loads and resolves
+      `sell_value_eur` without error at 2015-01-01 (1.177), 2020-01-01
+      (1.203), and 2024-01-01 (1.327), and that `acquisition_cost_eur`
+      raises `NoValueAvailableError` at every tested date.
 
 ## 5. Research and transcribe RC-conjoints and CMP
 
-- [ ] 5.1 Pull RC-conjoints' ("Point RC") full historical series
-      independently (not assumed to mirror NRCO/RCI) — verify by citing
-      the source and earliest/latest effective dates, or stating that
-      only the current (2026) value could be confirmed and documenting
-      that limitation.
-- [ ] 5.2 Pull CMP's ("compte minimum de points") full historical series
-      independently — same verification as 5.1.
-- [ ] 5.3 Create `rc_conjoints.csv`/`cmp.csv` and add `Fund.RC_CONJOINTS`
-      / `Fund.CMP` — verify both load and resolve without error on a
-      known date.
+- [x] 5.1 Searched independently for RC-conjoints' ("Point RC")
+      historical series: no dedicated IPP `baremes-ipp-yaml` file exists
+      for it (checked the full repo tree for "conjoint"/"rc_com"/
+      "rc_art"-named files — only RCO/NRCO's own files turned up), and
+      direct `legislation.lassuranceretraite.fr`/`legislation.cnav.fr`
+      barème-page fetches 404/failed (likely requiring interactive
+      navigation this tooling can't reach). Only the current CNAV
+      circulaire n°2025-31 value (1.347€ at 2026-01-01) could be
+      confirmed from a primary source — documenting this as a known
+      limitation rather than guessing an earlier series.
+- [x] 5.2 Same search applied to CMP ("compte minimum de points"): same
+      result — only the 2026-01-01 circular value (1.347€) confirmed.
+- [x] 5.3 Created `rc_conjoints.csv`/`cmp.csv`, each a single row
+      (`1/1/2026,,1.347,EUR`), and added `Fund.RC_CONJOINTS` /
+      `Fund.CMP` — verified both load and resolve `sell_value_eur`
+      without error at 2026-06-01 (1.347), and raise
+      `NoValueAvailableError` for any earlier date (e.g. 2024-01-01),
+      consistent with having no confirmed data before 2026.
 
 ## 6. Research RCEBTP (conditional)
 

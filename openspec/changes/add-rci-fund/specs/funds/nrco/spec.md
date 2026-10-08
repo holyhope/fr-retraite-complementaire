@@ -29,13 +29,25 @@ identifier is accepted.
 ### Requirement: NRCO historical point-value data
 
 The system SHALL provide a historical point-value table for the NRCO
-fund, covering both acquisition cost and sell value from NRCO's
-confirmed earliest effective date through its continuation (at RCI's
-own, "aligned" rate) after RCI's 2013 creation, as a step function over
-time with the same lookup and backward-fill semantics as every other
-fund's table (a date between two published values resolves to the most
-recent one at or before that date; a date before the earliest published
-value raises the same not-available error as other funds).
+fund as a step function over time, with the same lookup and
+backward-fill semantics as every other fund's table (a date between two
+published values resolves to the most recent one at or before that
+date; a date before the earliest published value raises the same
+not-available error as other funds).
+
+Sell value SHALL be available from NRCO's confirmed earliest effective
+date through its continuation (at RCI's own, "aligned" rate) after
+RCI's 2013 creation, since NRCO's already-acquired points keep being
+revalued going forward even though the scheme itself closed.
+
+Because the step-function table's backward-fill semantics have no way
+to mark a column as permanently closed while another column keeps
+receiving new values (a blank cell means "unchanged from the previous
+row", not "no longer available"), and sell value must keep updating
+indefinitely after 2013 while acquisition cost must not, NRCO is not
+required to provide an acquisition cost at any date; a request for
+acquisition cost MAY raise the same not-available error for every date
+(the same accommodation already made for RCO's closed-era buckets).
 
 #### Scenario: Sell value lookup resolves to the value in effect
 
@@ -51,6 +63,15 @@ value raises the same not-available error as other funds).
   for a date earlier than the fund's earliest known entry
 - **THEN** the system raises the same "no value available" error it
   raises for any other fund in that situation
+
+#### Scenario: Acquisition cost is unavailable for a closed scheme
+
+- **WHEN** the NRCO fund's acquisition cost is requested for any date
+- **THEN** the system either returns a value if one was confirmed to
+  exist for that date, or raises the same "no value available" error it
+  raises for any other fund with no data at that date — this is
+  expected behavior for a fund valuing a frozen point stock, not a
+  defect
 
 ### Requirement: Annuity computation includes NRCO contributions
 
