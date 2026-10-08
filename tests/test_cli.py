@@ -55,7 +55,7 @@ def test_compute_info_retraite_format_warns_and_computes(capsys):
     captured = capsys.readouterr()
     assert rc == 0
     assert "warning:" in captured.err
-    assert "RCI" in captured.err
+    assert "RCO" in captured.err
     assert "agirc_arrco" in captured.out
     assert "Total annual annuity" in captured.out
 

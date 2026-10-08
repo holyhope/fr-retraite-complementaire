@@ -128,71 +128,93 @@
 
 ## 6. Research RCEBTP (conditional)
 
-- [ ] 6.1 Research whether a citable, official pre-2023 historical
-      point-value table exists for RCEBTP — verify by stating either a
-      source and date range, or that none was found (and where this was
-      checked).
-- [ ] 6.2 If 6.1 found a source: create `rcebtp.csv` and add
-      `Fund.RCEBTP`, verified the same way as the other funds. If not:
-      do **not** create a fund for it — instead add a README "Known
-      limitations" note describing the 2023 RCEBTP→RCI migration and
-      that no pre-migration table is bundled — verify by re-reading that
-      section.
+- [x] 6.1 Researched RCEBTP: no IPP `baremes-ipp-yaml` file exists for
+      it (checked the full repo tree); confirmed via
+      `lassuranceretraite.fr`'s own 2022 announcement that RCEBTP closed
+      to new contributions in 1998 and its remaining points were
+      migrated/converted into RCI points on 2023-01-01 ("droits ...
+      migrés et convertis en points RCI"); found exactly one historical
+      point-value table, on a commercial financial-planning vendor's
+      site (Harvest's "Patrithèque", `simulateurs-big.harvest.fr`), not
+      an official CNAV/government source — and even that table only
+      covers 1980-1998 (FRF), missing 1999-2022 entirely and giving no
+      RCEBTP→RCI point-conversion coefficient. This doesn't meet the
+      "citable, official" bar — treating this as "no usable source
+      found", same as if nothing had turned up.
+- [x] 6.2 Did **not** create `Fund.RCEBTP` (6.1 found no official,
+      sufficiently complete source) — added a README "Known
+      limitations" note instead, describing the 1998 closure, the 2023
+      RCEBTP→RCI point migration/conversion, and that no pre-migration
+      table is bundled — verified by re-reading that section.
 
 ## 7. Update the info-retraite.fr importer
 
-- [ ] 7.1 Add `"RCI": Fund.RCI` to `FUND_LABELS` in
-      `src/fr_retraite_complementaire/importers/info_retraite.py` — NOT
-      yet done (checked during an `/opsx-continue` coherence pass:
-      `FUND_LABELS` still only has `Agirc-Arrco`/`Ircantec`) — verify by
-      inspecting `FUND_LABELS` and importing a fixture export containing
-      an `"RCI : N points"` row, asserting the resulting `Career` has
-      those points under `Fund.RCI` with no corresponding
+- [x] 7.1 Added `"RCI": Fund.RCI` to `FUND_LABELS` in
+      `src/fr_retraite_complementaire/importers/info_retraite.py` —
+      verified by adding an `"RCI : 16 points"` row to
+      `tests/data/info-retraite-sample.csv` (2016) and asserting (in
+      `test_loads_sample_export_warn_policy`) the resulting `Career`
+      has `Decimal(16)` points under `Fund.RCI` with no corresponding
       `ImportResult.skipped` entry.
-- [ ] 7.2 Determine whether any of RCO/NRCO/RC-conjoints/CMP/RCEBTP ever
-      appear as their own distinct labeled rows in a
-      www.info-retraite.fr export (as opposed to always being bundled
-      into the "RCI" line) — verify by inspecting a real or documented
-      export format; add `FUND_LABELS` entries only for labels actually
-      confirmed to appear.
-- [ ] 7.3 Update the module docstring/comment that cited RCI as an
-      unsupported scheme example — NOT yet done (still references RCI
-      as unsupported as of this `/opsx-continue` pass) — verify by
-      re-reading the docstring and `cli.py`'s help text for remaining
-      stale references.
+- [x] 7.2 No real or documented www.info-retraite.fr export containing
+      a distinct RCO/NRCO/RC-conjoints/CMP/RCEBTP label was found (only
+      the format's general shape and an `"RCI : N points"` example from
+      a prior session's own export were available) — did **not** add
+      speculative `FUND_LABELS` entries for them, since a wrong guess
+      would silently mis-map real import data. The test fixture now uses
+      `"RCO"` as its representative still-unsupported-scheme example
+      (replacing the now-supported `"RCI"`).
+- [x] 7.3 Updated the module docstring: RCI is now listed as supported
+      (`Fund.RCI`); the unsupported-example callout now names
+      RCO/NRCO/RC-conjoints/CMP/RCEBTP instead, with the 7.2 rationale
+      (no confirmed label string) — verified by re-reading the
+      docstring; `cli.py`'s help text does not name specific funds, so
+      needed no change.
 
 ## 8. Update tests
 
-- [ ] 8.1 Update fund-count assertions in `tests/test_data_loader.py` to
-      the final total (after all new funds in sections 3-6 exist) —
-      verify `uv run pytest tests/test_data_loader.py -q` passes.
-- [ ] 8.2 Update `tests/test_importers.py` and the synthetic fixture
-      `tests/data/info-retraite-sample.csv` per 7.2's findings (RCI row
-      now supported; at least one remaining unsupported scheme still
-      covered for the warn/skip/error-policy tests) — verify
+- [x] 8.1 Updated the fund-count assertion in `tests/test_data_loader.py`
+      to 60 (added explicit `"rci"`/`"nrco"` membership checks too) —
+      verified `uv run pytest tests/test_data_loader.py -q` passes.
+- [x] 8.2 Updated `tests/test_importers.py` and the synthetic fixture
+      `tests/data/info-retraite-sample.csv` per 7.2's findings: added an
+      `"RCI : 16 points"` row (now supported, matches the module
+      docstring's own example value) and renamed the still-unsupported
+      example rows from `"RCI"` to `"RCO"` — verified
       `uv run pytest tests/test_importers.py -q` passes.
-- [ ] 8.3 Update `tests/test_cli.py` if it references RCI or any new
-      fund as unsupported — verify `uv run pytest tests/test_cli.py -q`
-      passes.
-- [ ] 8.4 Add a focused load/lookup test per new fund (mirrors
-      `test_ircantec_acquisition_cost_and_sell_value_split_rows`):
-      assert a known effective date resolves to its published value(s)
-      in EUR, and that a date before the fund's earliest entry raises
-      `NoValueAvailableError` — verify each new test passes.
+- [x] 8.3 Updated `tests/test_cli.py`'s `"RCI" in captured.err` assertion
+      to `"RCO"` (same fixture rename as 8.2) — verified
+      `uv run pytest tests/test_cli.py -q` passes.
+- [x] 8.4 Added one focused load/lookup test per new fund
+      (`test_rci_...`, `test_rco_*_...`, `test_nrco_...`,
+      `test_rc_conjoints_and_cmp_...`) to `tests/test_data_loader.py`,
+      each asserting a known effective date resolves to its published
+      sell value in EUR and that `acquisition_cost_eur`/an earlier date
+      raises `NoValueAvailableError` — verified
+      `uv run pytest tests/test_data_loader.py -q` passes.
 
 ## 9. Update documentation
 
-- [ ] 9.1 Add a README "Files" bullet per new CSV (RCI's own bullet
-      already added), citing its source and covered date range —
-      verify by reading the rendered section for consistency with the
+- [x] 9.1 Added a README "Files" bullet per new CSV (`rci.csv`,
+      `rco_avant_1979.csv`/`rco_1979_1996.csv`/`rco_1997_2012.csv`,
+      `nrco.csv`, `rc_conjoints.csv`/`cmp.csv`), each citing its source
+      and covered date range, plus "Known limitations" notes for the
+      sell-value-only funds and the single-data-point funds — verified
+      by re-reading the rendered section for consistency with the
       existing bullets.
-- [ ] 9.2 Update the "Importing a www.info-retraite.fr export" section
-      per 7.2's findings — verify by re-reading that section.
+- [x] 9.2 Updated the "Importing a www.info-retraite.fr export" section
+      per 7.2's findings: RCI is now listed as supported, and the five
+      unmapped legacy schemes (RCO/NRCO/RC-conjoints/CMP/RCEBTP) are
+      named with the rationale for not guessing their label strings —
+      verified by re-reading that section.
 
 ## 10. Full verification
 
-- [ ] 10.1 Run `uv run pytest -q` and confirm all tests pass.
-- [ ] 10.2 Run `uv run ruff check src tests` and `uv run ruff format
-       --check src tests` and confirm no issues.
-- [ ] 10.3 Run `uv build` and confirm every new fund's CSV is present
-       inside the built wheel alongside the other packaged fund CSVs.
+- [x] 10.1 Ran `uv run pytest -q`: 42 passed.
+- [x] 10.2 Ran `uv run ruff check src tests` and `uv run ruff format
+       --check src tests`: both clean ("All checks passed!", 17 files
+       already formatted).
+- [x] 10.3 Ran `uv build` and confirmed via `unzip -l` on the built
+       wheel that all 60 fund CSVs (including `rci.csv`,
+       `rco_avant_1979.csv`, `rco_1979_1996.csv`, `rco_1997_2012.csv`,
+       `nrco.csv`, `rc_conjoints.csv`, `cmp.csv`) are packaged.

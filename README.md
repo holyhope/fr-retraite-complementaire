@@ -78,12 +78,16 @@ fr-retraite-complementaire compute \
 
 That export reports yearly point totals per complementary scheme. This
 package has historical point-value data for the merged **Agirc-Arrco**
-scheme (`Agirc-Arrco : ... points` rows) and **Ircantec**
-(`Ircantec : ... points` rows, public-sector non-permanent staff).
-Other schemes that may appear in the export, such as **RCI**
-(self-employed workers), are entirely different pension systems this
-package does not bundle data for. By default, unsupported rows are
-skipped with a warning printed to stderr;
+scheme (`Agirc-Arrco : ... points` rows), **Ircantec**
+(`Ircantec : ... points` rows, public-sector non-permanent staff), and
+**RCI** (`RCI : ... points` rows, self-employed workers). RCI's own
+pre-2013 predecessor schemes (RCO, NRCO, RC-conjoints, CMP, RCEBTP) are
+also bundled as their own funds (see "Files" below) but are **not**
+mapped in the importer: no real or documented export containing a
+distinct label for any of them was found to confirm the exact string
+info-retraite.fr would use, so none is guessed. Any other scheme in the
+export, or one of those five, is handled as unsupported: by default,
+unsupported rows are skipped with a warning printed to stderr;
 use `--on-unsupported-fund skip` to silence the warnings, or
 `--on-unsupported-fund error` to fail hard instead. The same behavior is
 available programmatically via
@@ -94,15 +98,18 @@ be inspected or reported separately.
 ## Data
 
 Historical point-value data is bundled with the package under
-`fr_retraite_complementaire/data/funds/*.csv`. 52 of the 53 files are
+`fr_retraite_complementaire/data/funds/*.csv`. 52 of the 60 files are
 sourced from the official Agirc-Arrco compilation PDF:
 
 > https://www.agirc-arrco.fr/storage/2024/10/Compilation_valeurs_de_point_novembre_2025.pdf
 
-`ircantec.csv` is the exception: Ircantec is an entirely separate
-pension scheme (public-sector non-permanent staff), not part of the
-Agirc-Arrco lineage, so it is sourced from Ircantec's own official
-publications instead (see its "Files" bullet below).
+The other 8 are entirely separate pension schemes, not part of the
+Agirc-Arrco lineage, each sourced from its own official publications
+instead (see their "Files" bullets below): `ircantec.csv`
+(public-sector non-permanent staff), `rci.csv` plus its six legacy
+predecessor-scheme files (`rco_avant_1979.csv`, `rco_1979_1996.csv`,
+`rco_1997_2012.csv`, `nrco.csv`, `rc_conjoints.csv`, `cmp.csv` --
+self-employed workers).
 
 Each CSV has the columns:
 
@@ -157,6 +164,31 @@ Starting from,Acquisition cost,Sell value,Currency
   2011**; see Known limitations. Both columns use the split-row
   technique like `agirc_arrco.csv`, since they are published on
   different (and, before 2019, irregular) effective dates.
+- `rci.csv` — RCI (Régime Complémentaire des Indépendants, self-employed
+  workers; created 2013-01-01 from the merger of RCO and NRCO).
+  **2013–2026**, sourced from CNAV/Assurance Retraite circulars and
+  `statistiques-recherche.lassuranceretraite.fr`'s annual "Fiche-stock"
+  publications (see `openspec/changes/add-rci-fund/tasks.md` for the
+  exact URLs cited per date range).
+- `rco_avant_1979.csv` / `rco_1979_1996.csv` / `rco_1997_2012.csv` —
+  RCO (artisans' legacy complementary scheme, closed to new
+  acquisitions by RCI's 2013 creation), split into three era-buckets
+  per the IPP `baremes-ipp-yaml` source's own category breakdown.
+  **1980–2026** (the 1997–2012 bucket from **1997**), sourced from IPP's
+  `pt_rc_art.yaml`/`salref_rc_art.yaml`/`pt_rci.yaml` (1980–2022) and
+  CNAV's annual "Fiche-stock Régime complémentaire TI" sheets plus
+  circulaire n°2025-31 (2023–2026). **Sell value only** — see Known
+  limitations.
+- `nrco.csv` — NRCO (commerçants' legacy complementary scheme,
+  2004–2012, then merged into RCI's 2013 creation). **2004–2026**,
+  sourced from IPP's `pt_rc_com.yaml` (2004–2012) and the same RCI-era
+  sources as `rco_1997_2012.csv` from 2013 onward (its post-2013 rate
+  is identical to RCI's own). **Sell value only** — see Known
+  limitations.
+- `rc_conjoints.csv` / `cmp.csv` — RC-conjoints ("Point RC", the legacy
+  scheme for commerçants' spouses) and CMP ("compte minimum de
+  points"). Only **2026-01-01** could be confirmed, from CNAV
+  circulaire n°2025-31; see Known limitations.
 
 ### Known limitations
 
@@ -181,6 +213,34 @@ Starting from,Acquisition cost,Sell value,Currency
   available from 1947. A `Career` with Ircantec points recorded before
   2011 can still be loaded, but computing its annuity will raise
   `NoValueAvailableError` until a sell value is known.
+- `rco_avant_1979.csv` / `rco_1979_1996.csv` / `rco_1997_2012.csv` /
+  `nrco.csv` have **no acquisition cost at all** (every
+  `acquisition_cost_eur()` call raises `NoValueAvailableError`), even
+  though real historical acquisition-cost figures exist for some of
+  these buckets. All four schemes are closed to new acquisitions (RCO
+  by RCI's 2013 creation, NRCO likewise), and this package's `FundTable`
+  step-function format has no way to mark a column "closed" --
+  a blank cell always means "unchanged since the last row", never
+  "no longer available". Modeling a real acquisition-cost series that
+  stops in, say, 2012 would make later dates silently inherit that
+  stale 2012 rate instead of correctly reporting unavailability, so the
+  column is omitted entirely instead.
+- `rc_conjoints.csv` / `cmp.csv` only have a single confirmed data
+  point each (2026-01-01). No earlier historical series could be found
+  for either scheme despite searching the same sources used for
+  RCI/RCO/NRCO; computing an annuity for points recorded before 2026
+  will raise `NoValueAvailableError`.
+
+- No pre-migration table is bundled for **RCEBTP** (régime de retraite
+  complémentaire des entrepreneurs du bâtiment et des travaux publics,
+  a legacy scheme for construction-sector self-employed workers,
+  definitively closed to new contributions in 1998). Its remaining
+  points were migrated and converted into RCI points on January 1st,
+  2023. The only historical point-value table found for it is on a
+  commercial financial-planning vendor's site (not an official
+  CNAV/government source), and even that only covers 1980-1998 with no
+  RCEBTP→RCI conversion coefficient — not citable or complete enough to
+  bundle.
 
 No values were fabricated; blank cells reflect either a lack of data in
 the source for that field, or no revaluation event for that sub-period.

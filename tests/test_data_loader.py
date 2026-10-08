@@ -13,7 +13,11 @@ def test_list_funds_includes_known_funds():
     assert "arrco" in funds
     assert "agirc_arrco" in funds
     assert "agrr" in funds
-    assert len(funds) == 53  # 3 unified tables + 49 affiliated funds + Ircantec
+    assert "rci" in funds
+    assert "nrco" in funds
+    # 3 unified Agirc-Arrco tables + 49 pre-1999 affiliated funds + Ircantec
+    # + RCI + 3 RCO era-buckets + NRCO + RC-conjoints + CMP.
+    assert len(funds) == 60
 
 
 def test_load_fund_agirc_has_entries_sorted_ascending():
@@ -81,3 +85,54 @@ def test_ircantec_acquisition_cost_and_sell_value_split_rows():
     # Documented gap: no official sell value before 2011.
     with pytest.raises(NoValueAvailableError):
         table.sell_value_eur(date(2010, 12, 31))
+
+
+def test_rci_acquisition_cost_and_sell_value():
+    table = load_fund("rci")
+    assert table.earliest_date == date(2013, 1, 1)
+    assert table.acquisition_cost_eur(date(2024, 1, 1)) == Decimal("20.734")
+    assert table.sell_value_eur(date(2024, 1, 1)) == Decimal("1.327")
+    assert table.sell_value_eur(date(2026, 1, 1)) == Decimal("1.347")
+    with pytest.raises(NoValueAvailableError):
+        table.sell_value_eur(date(2012, 12, 31))
+
+
+def test_rco_era_buckets_are_sell_value_only():
+    # Regression test: all three RCO era-buckets are closed to new
+    # acquisitions, so acquisition_cost_eur must never resolve -- a
+    # resolved value would wrongly imply the bucket is still buyable.
+    for name in ("rco_avant_1979", "rco_1979_1996", "rco_1997_2012"):
+        table = load_fund(name)
+        with pytest.raises(NoValueAvailableError):
+            table.acquisition_cost_eur(date(2024, 1, 1))
+
+    avant_1979 = load_fund("rco_avant_1979")
+    assert avant_1979.sell_value_eur(date(2022, 1, 1)) == Decimal("1.121")
+    assert avant_1979.sell_value_eur(date(2026, 1, 1)) == Decimal("1.158")
+    with pytest.raises(NoValueAvailableError):
+        avant_1979.sell_value_eur(date(1979, 12, 31))
+
+
+def test_nrco_sell_value_only_aligned_with_rci_post_2013():
+    table = load_fund("nrco")
+    assert table.earliest_date == date(2004, 1, 1)
+    assert table.sell_value_eur(date(2004, 1, 1)) == Decimal(1)
+    # From 2013 onward, NRCO's sell value tracks RCI/rco_1997_2012's own
+    # rate exactly (both read 1.347 at 2026-01-01 per the 2025 circular).
+    assert table.sell_value_eur(date(2026, 1, 1)) == Decimal("1.347")
+    with pytest.raises(NoValueAvailableError):
+        table.acquisition_cost_eur(date(2026, 1, 1))
+    with pytest.raises(NoValueAvailableError):
+        table.sell_value_eur(date(2003, 12, 31))
+
+
+def test_rc_conjoints_and_cmp_only_have_the_2026_circular_value():
+    # Documented limitation: only one data point (2026-01-01) could be
+    # confirmed from a primary source for either fund.
+    for name in ("rc_conjoints", "cmp"):
+        table = load_fund(name)
+        assert table.sell_value_eur(date(2026, 1, 1)) == Decimal("1.347")
+        with pytest.raises(NoValueAvailableError):
+            table.sell_value_eur(date(2025, 12, 31))
+        with pytest.raises(NoValueAvailableError):
+            table.acquisition_cost_eur(date(2026, 1, 1))
